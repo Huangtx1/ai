@@ -27,7 +27,7 @@ body{background:linear-gradient(135deg,#4158D0,#C850C0);min-height:100vh;display
 <div class="chat">
   <div class="header">
     <h1>与 HwangTaaiyam 对话</h1>
-    <p></p >
+    <p></p>
   </div>
   <div class="body" id="chatBody">
     <div class="msg bot">你好，我是 HwangTaaiyam，有什么想跟我说的？ 我猜猜看，你的名字叫杨文安，对不对？</div>
@@ -39,13 +39,13 @@ body{background:linear-gradient(135deg,#4158D0,#C850C0);min-height:100vh;display
 </div>
 
 <script>
-const WORKER_URL = "https://ai.nebtap.com/api";
+// ✅ 正确地址（必须匹配路由）
+const WORKER_URL = "https://ai.nebtap.com/api/";
 
 const chatBody = document.getElementById("chatBody");
 const input = document.getElementById("input");
 const send = document.getElementById("send");
 
-// 适配手机端：自动调整输入框高度
 input.addEventListener("input", () => {
   input.style.height = "auto";
   input.style.height = input.scrollHeight + "px";
@@ -65,7 +65,7 @@ async function sendMsg() {
 
   addMsg(text, "user");
   input.value = "";
-  input.style.height = "auto"; // 重置输入框高度
+  input.style.height = "auto";
   send.disabled = true;
 
   const loading = document.createElement("div");
@@ -75,25 +75,21 @@ async function sendMsg() {
   chatBody.scrollTop = chatBody.scrollHeight;
 
   try {
-    // 强制加时间戳，避免浏览器缓存（手机/他人必生效）
     const res = await fetch(`${WORKER_URL}?t=${Date.now()}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        message: text
-      }),
+      body: JSON.stringify({ message: text }),
     });
 
     const data = await res.json();
     chatBody.removeChild(loading);
 
-    // 优先取API回复，否则取错误信息
-    let reply = data.choices?.[0]?.message?.content || data.error || "抱歉，我暂时无法回复";
-    reply = reply.slice(0, 30); // 强制截断30字
+    // ✅ 修复：读取正确的 reply 字段
+    let reply = data.reply || data.error || "抱歉，我暂时无法回复";
     addMsg(reply, "bot");
   } catch (e) {
     chatBody.removeChild(loading);
-    addMsg(`请求失败：${e.message}`, "bot"); // 显示具体错误，不再模糊
+    addMsg(`请求失败：${e.message}`, "bot");
   } finally {
     send.disabled = false;
     chatBody.scrollTop = chatBody.scrollHeight;
