@@ -39,12 +39,17 @@ body{background:linear-gradient(135deg,#4158D0,#C850C0);min-height:100vh;display
 </div>
 
 <script>
-
 const WORKER_URL = "https://ai.hug070325.workers.dev/";
 
 const chatBody = document.getElementById("chatBody");
 const input = document.getElementById("input");
 const send = document.getElementById("send");
+
+// 适配手机端：自动调整输入框高度
+input.addEventListener("input", () => {
+  input.style.height = "auto";
+  input.style.height = input.scrollHeight + "px";
+});
 
 send.onclick = sendMsg;
 input.addEventListener("keydown", e => {
@@ -60,33 +65,38 @@ async function sendMsg() {
 
   addMsg(text, "user");
   input.value = "";
+  input.style.height = "auto"; // 重置输入框高度
   send.disabled = true;
 
   const loading = document.createElement("div");
   loading.className = "loading";
   loading.textContent = "HwangTaaiyam 思考中…";
   chatBody.appendChild(loading);
+  chatBody.scrollTop = chatBody.scrollHeight;
 
   try {
-    const res = await fetch(WORKER_URL, {
+    // 强制加时间戳，避免浏览器缓存（手机/他人必生效）
+    const res = await fetch(`${WORKER_URL}?t=${Date.now()}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        message: `你是 HwangTaaiyam，回答控制在 30 字以内：${text}`
-      })
+        message: text
+      }),
     });
 
     const data = await res.json();
     chatBody.removeChild(loading);
 
-    let reply = data.choices?.[0]?.message?.content || "抱歉，我暂时无法回复";
-    reply = reply.slice(0, 30); // 强制截断
+    // 优先取API回复，否则取错误信息
+    let reply = data.choices?.[0]?.message?.content || data.error || "抱歉，我暂时无法回复";
+    reply = reply.slice(0, 30); // 强制截断30字
     addMsg(reply, "bot");
   } catch (e) {
     chatBody.removeChild(loading);
-    addMsg("请求失败，请稍后再试", "bot");
+    addMsg(`请求失败：${e.message}`, "bot"); // 显示具体错误，不再模糊
   } finally {
     send.disabled = false;
+    chatBody.scrollTop = chatBody.scrollHeight;
   }
 }
 
